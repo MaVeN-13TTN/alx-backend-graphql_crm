@@ -1,21 +1,35 @@
 import graphene
 from graphene_django import DjangoObjectType
+from graphene_django.filter import DjangoFilterConnectionField
 from .models import Customer, Product, Order
 from django.core.exceptions import ValidationError
 from django.db import transaction
 import re
+from .filters import CustomerFilter, ProductFilter, OrderFilter
 
 
 class CustomerType(DjangoObjectType):
     class Meta:
         model = Customer
         fields = ("id", "name", "email", "phone", "created_at")
+        interfaces = (graphene.relay.Node,)
+        filter_fields = {
+            "name": ["icontains"],
+            "email": ["icontains"],
+            "created_at": ["gte", "lte"],
+        }
 
 
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
         fields = ("id", "name", "description", "price", "stock", "created_at")
+        interfaces = (graphene.relay.Node,)
+        filter_fields = {
+            "name": ["icontains"],
+            "price": ["gte", "lte"],
+            "stock": ["exact", "gte", "lte"],
+        }
 
 
 class OrderType(DjangoObjectType):
@@ -29,6 +43,14 @@ class OrderType(DjangoObjectType):
             "total_amount",
             "created_at",
         )
+        interfaces = (graphene.relay.Node,)
+        filter_fields = {
+            "customer__name": ["icontains"],
+            "products__name": ["icontains"],
+            "products__id": ["exact"],
+            "total_amount": ["gte", "lte"],
+            "order_date": ["gte", "lte"],
+        }
 
 
 class CreateCustomerInput(graphene.InputObjectType):
@@ -184,21 +206,91 @@ class CreateOrder(graphene.Mutation):
 
 
 class Query(graphene.ObjectType):
-    all_customers = graphene.List(CustomerType)
-    all_products = graphene.List(ProductType)
-    all_orders = graphene.List(OrderType)
+    all_customers = graphene.List(
+        CustomerType,
+        name=graphene.String(),
+        email=graphene.String(),
+        created_at_gte=graphene.DateTime(),
+        created_at_lte=graphene.DateTime(),
+        phone_pattern=graphene.String(),
+        order_by=graphene.String(),
+    )
+    all_products = graphene.List(
+        ProductType,
+        name=graphene.String(),
+        price_gte=graphene.Decimal(),
+        price_lte=graphene.Decimal(),
+        stock_gte=graphene.Int(),
+        stock_lte=graphene.Int(),
+        low_stock=graphene.Boolean(),
+        order_by=graphene.String(),
+    )
+    all_orders = graphene.List(
+        OrderType,
+        customer_name=graphene.String(),
+        product_name=graphene.String(),
+        product_id=graphene.ID(),
+        total_amount_gte=graphene.Decimal(),
+        total_amount_lte=graphene.Decimal(),
+        order_date_gte=graphene.DateTime(),
+        order_date_lte=graphene.DateTime(),
+        order_by=graphene.String(),
+    )
 
-    @staticmethod
-    def resolve_all_customers(root, info):
-        return Customer.objects.all()
+    def resolve_all_customers(root, info, **kwargs):
+        filters = {
+            "name__icontains": kwargs.get("name"),
+            "email__icontains": kwargs.get("email"),
+            "created_at__gte": kwargs.get("created_at_gte"),
+            "created_at__lte": kwargs.get("created_at_lte"),
+        }
+        filters = {k: v for k, v in filters.items() if v is not None}
+        queryset = Customer.objects.filter(**filters)
 
-    @staticmethod
-    def resolve_all_products(root, info):
-        return Product.objects.all()
+        if "phone_pattern" in kwargs:
+            queryset = queryset.filter(phone__startswith=kwargs["phone_pattern"])
 
-    @staticmethod
-    def resolve_all_orders(root, info):
-        return Order.objects.prefetch_related("customer", "products").all()
+        if "order_by" in kwargs:
+            queryset = queryset.order_by(kwargs["order_by"])
+
+        return queryset
+
+    def resolve_all_products(root, info, **kwargs):
+        filters = {
+            "name__icontains": kwargs.get("name"),
+            "price__gte": kwargs.get("price_gte"),
+            "price__lte": kwargs.get("price_lte"),
+            "stock__gte": kwargs.get("stock_gte"),
+            "stock__lte": kwargs.get("stock_lte"),
+        }
+        filters = {k: v for k, v in filters.items() if v is not None}
+        queryset = Product.objects.filter(**filters)
+
+        if kwargs.get("low_stock"):
+            queryset = queryset.filter(stock__lt=10)
+
+        if "order_by" in kwargs:
+            queryset = queryset.order_by(kwargs["order_by"])
+
+        return queryset
+
+    def resolve_all_orders(root, info, **kwargs):
+        filters = {
+            "customer__name__icontains": kwargs.get("customer_name"),
+            "products__name__icontains": kwargs.get("product_name"),
+            "products__id": kwargs.get("product_id"),
+            "total_amount__gte": kwargs.get("total_amount_gte"),
+            "total_amount__lte": kwargs.get("total_amount_lte"),
+            "order_date__gte": kwargs.get("order_date_gte"),
+            "order_date__lte": kwargs.get("order_date_lte"),
+        }
+        filters = {k: v for k, v in filters.items() if v is not None}
+        queryset = Order.objects.filter(**filters).distinct()
+
+        if "order_by" in kwargs:
+            queryset = queryset.order_by(kwargs["order_by"])
+
+        return queryset
 
 
 class Mutation(graphene.ObjectType):

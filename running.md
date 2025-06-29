@@ -132,4 +132,77 @@ mutation {
     }
   }
 }
+```
+
+---
+
+## Task 3: Add Filtering and Sorting
+
+### Implementation Details
+
+- **Dependencies:** Added `django_filters` to the `INSTALLED_APPS` in `settings.py`.
+- **GraphQL Schema (`crm/schema.py`):**
+    - **Node Interface:** Updated `CustomerType`, `ProductType`, and `OrderType` to implement Graphene's `Node` interface, which is required for connections.
+    - **Filtering:** Replaced `graphene.List` with `graphene_django.filter.DjangoFilterConnectionField` for `all_customers`, `all_products`, and `all_orders`.
+    - **Filter Fields:** Defined the available filters directly in each type's `Meta` class using the `filter_fields` attribute. This enables filtering by text, ranges, and related fields (e.g., filtering orders by customer name).
+
+### How to Test
+
+Use the following queries in the GraphiQL interface to test the filtering functionality. Note that with `DjangoFilterConnectionField`, filter arguments are passed directly to the query, not inside a `filter` object.
+
+**1. Filter customers by name (case-insensitive) and creation date:**
+
+```graphql
+query {
+  allCustomers(name_Icontains: "john", createdAt_Gte: "2025-06-29T00:00:00+00:00") {
+    edges {
+      node {
+        id
+        name
+        email
+        createdAt
+      }
+    }
+  }
+}
+```
+
+**2. Filter products by price range:**
+
+```graphql
+query {
+  allProducts(price_Gte: 100, price_Lte: 1500) {
+    edges {
+      node {
+        id
+        name
+        price
+        stock
+      }
+    }
+  }
+}
+```
+
+**3. Filter orders by customer name and product name:**
+
+```graphql
+query {
+  allOrders(customer_Name_Icontains: "john", products_Name_Icontains:"laptop") {
+    edges {
+      node {
+        id
+        customer {
+          name
+        }
+        products {
+          name
+          price
+        }
+        totalAmount
+        orderDate
+      }
+    }
+  }
+}
 ``` 
