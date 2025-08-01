@@ -5,7 +5,6 @@ from .models import Customer, Product, Order
 from django.core.exceptions import ValidationError
 from django.db import transaction
 import re
-from .filters import CustomerFilter, ProductFilter, OrderFilter
 
 
 class CustomerType(DjangoObjectType):
