@@ -21,5 +21,5 @@ INSTALLED_APPS = [
 # Cron jobs configuration
 CRONJOBS = [
     ("*/5 * * * *", "crm.cron.logcrmheartbeat"),
-    ("0 */12 * * *", "crm.cron.update_low_stock"),
+    ("0 */12 * * *", "crm.cron.updatelowstock"),
 ]

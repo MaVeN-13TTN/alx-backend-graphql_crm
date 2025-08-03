@@ -124,16 +124,24 @@ def update_low_stock():
             log_entries.append(f"[{timestamp}] No low-stock products found to update")
 
         # Write to log file
-        with open("/tmp/low_stock_updates_log.txt", "a") as log_file:
+        with open("/tmp/lowstockupdates_log.txt", "a") as log_file:
             for entry in log_entries:
                 log_file.write(entry + "\n")
 
     except Exception as e:
         # Log errors
         error_message = f"[{timestamp}] ERROR in low stock update: {str(e)}"
-        with open("/tmp/low_stock_updates_log.txt", "a") as log_file:
+        with open("/tmp/lowstockupdates_log.txt", "a") as log_file:
             log_file.write(error_message + "\n")
         print(f"Error updating low stock products: {e}")
+
+
+def updatelowstock():
+    """
+    Alternative function name without underscores for compatibility.
+    Calls the main update_low_stock function.
+    """
+    return update_low_stock()
 
 
 def logcrmheartbeat():
