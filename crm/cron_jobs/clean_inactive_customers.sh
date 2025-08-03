@@ -37,4 +37,4 @@ print(count)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Log the result to the specified file
-echo "[$TIMESTAMP] Deleted $DELETED_COUNT inactive customers" >> /tmp/customercleanuplog.txt
+echo "[$TIMESTAMP] Deleted $DELETED_COUNT inactive customers" >> /tmp/customer_cleanup_log.txt
