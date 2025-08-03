@@ -205,6 +205,7 @@ class CreateOrder(graphene.Mutation):
 
 
 class Query(graphene.ObjectType):
+    hello = graphene.String()
     all_customers = graphene.List(
         CustomerType,
         name=graphene.String(),
@@ -235,6 +236,9 @@ class Query(graphene.ObjectType):
         order_date_lte=graphene.DateTime(),
         order_by=graphene.String(),
     )
+
+    def resolve_hello(self, info):
+        return "Hello from CRM GraphQL API!"
 
     def resolve_all_customers(root, info, **kwargs):
         filters = {
