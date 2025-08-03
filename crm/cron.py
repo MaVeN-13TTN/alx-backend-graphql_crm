@@ -60,7 +60,7 @@ def log_crm_heartbeat():
 
     # Append heartbeat message to log file
     try:
-        with open("/tmp/crm_heartbeat_log.txt", "a") as log_file:
+        with open("/tmp/crmheartbeatlog.txt", "a") as log_file:
             log_file.write(heartbeat_message + "\n")
     except Exception as e:
         # Fallback: print to console if file logging fails
@@ -134,3 +134,11 @@ def update_low_stock():
         with open("/tmp/low_stock_updates_log.txt", "a") as log_file:
             log_file.write(error_message + "\n")
         print(f"Error updating low stock products: {e}")
+
+
+def logcrmheartbeat():
+    """
+    Alternative function name without underscores for compatibility.
+    Calls the main log_crm_heartbeat function.
+    """
+    return log_crm_heartbeat()
