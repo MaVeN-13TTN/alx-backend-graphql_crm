@@ -1,3 +1,13 @@
+"""
+GraphQL schema for the CRM application.
+
+Note: Pylance warnings about "No parameter named" in GraphQL mutations are expected.
+GraphQL mutations use dynamic parameter binding that Pylance cannot analyze statically.
+"""
+
+# pylint: disable=no-member,unused-argument
+# type: ignore
+
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -240,7 +250,8 @@ class Query(graphene.ObjectType):
     def resolve_hello(self, info):
         return "Hello from CRM GraphQL API!"
 
-    def resolve_all_customers(root, info, **kwargs):
+    # GraphQL resolvers: 'root' parameter is intentional for GraphQL context
+    def resolve_all_customers(root, info, **kwargs):  # type: ignore[misc]
         filters = {
             "name__icontains": kwargs.get("name"),
             "email__icontains": kwargs.get("email"),
@@ -258,7 +269,7 @@ class Query(graphene.ObjectType):
 
         return queryset
 
-    def resolve_all_products(root, info, **kwargs):
+    def resolve_all_products(root, info, **kwargs):  # type: ignore[misc]
         filters = {
             "name__icontains": kwargs.get("name"),
             "price__gte": kwargs.get("price_gte"),
@@ -277,7 +288,7 @@ class Query(graphene.ObjectType):
 
         return queryset
 
-    def resolve_all_orders(root, info, **kwargs):
+    def resolve_all_orders(root, info, **kwargs):  # type: ignore[misc]
         filters = {
             "customer__name__icontains": kwargs.get("customer_name"),
             "products__name__icontains": kwargs.get("product_name"),
@@ -296,8 +307,49 @@ class Query(graphene.ObjectType):
         return queryset
 
 
+class UpdateLowStockProducts(graphene.Mutation):
+    """
+    Mutation to update low-stock products by incrementing their stock by 10.
+    Targets products with stock < 10.
+    """
+
+    class Arguments:
+        pass  # No arguments needed for this mutation
+
+    updated_products = graphene.List(ProductType)
+    message = graphene.String()
+    count = graphene.Int()
+
+    @staticmethod
+    def mutate(root, info):
+        try:
+            # Find products with low stock (< 10)
+            low_stock_products = Product.objects.filter(stock__lt=10)
+
+            updated_products = []
+
+            with transaction.atomic():
+                for product in low_stock_products:
+                    # Increment stock by 10
+                    product.stock += 10
+                    product.save()
+                    updated_products.append(product)
+
+            count = len(updated_products)
+            message = f"Successfully updated {count} low-stock products"
+
+            # GraphQL mutation return: Pylance warnings about parameters are expected
+            return UpdateLowStockProducts(  # type: ignore[call-arg]
+                updated_products=updated_products, message=message, count=count
+            )
+
+        except Exception as e:
+            raise Exception(f"Failed to update low-stock products: {str(e)}")
+
+
 class Mutation(graphene.ObjectType):
     create_customer = CreateCustomer.Field()
     bulk_create_customers = BulkCreateCustomers.Field()
     create_product = CreateProduct.Field()
     create_order = CreateOrder.Field()
+    update_low_stock_products = UpdateLowStockProducts.Field()

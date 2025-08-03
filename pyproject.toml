@@ -1,0 +1,21 @@
+[tool.pylance]
+# Configuration for Pylance (Python Language Server for VS Code)
+
+# Disable specific diagnostics that are common in GraphQL/Django projects
+reportCallIssue = "none"  # GraphQL mutations use dynamic parameter binding
+reportSelfClsParameterName = "warning"  # GraphQL resolvers often use 'root' instead of 'self'
+
+[tool.pyright]
+# Pyright configuration (used by Pylance)
+reportCallIssue = "none"
+reportSelfClsParameterName = "warning"
+
+[tool.pylint]
+# Pylint configuration
+disable = [
+    "no-member",  # Django/GraphQL dynamic attributes
+    "unused-argument",  # GraphQL resolvers often have unused parameters
+]
+
+[tool.pylint.MESSAGES_CONTROL]
+disable = "C0103,R0903,W0613"  # naming-convention, too-few-public-methods, unused-argument

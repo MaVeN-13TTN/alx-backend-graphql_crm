@@ -66,3 +66,71 @@ def log_crm_heartbeat():
         # Fallback: print to console if file logging fails
         print(f"Failed to write to heartbeat log: {e}")
         print(heartbeat_message)
+
+
+def update_low_stock():
+    """
+    Execute the UpdateLowStockProducts mutation and log the results.
+
+    This function:
+    1. Executes the UpdateLowStockProducts mutation via GraphQL endpoint
+    2. Logs updated product names and new stock levels to /tmp/low_stock_updates_log.txt
+    """
+    # Get current timestamp
+    timestamp = datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
+
+    try:
+        # Set up GraphQL client
+        transport = RequestsHTTPTransport(url="http://localhost:8000/graphql")
+        client = Client(transport=transport, fetch_schema_from_transport=True)
+
+        # GraphQL mutation to update low-stock products
+        mutation = gql(
+            """
+            mutation {
+                updateLowStockProducts {
+                    updatedProducts {
+                        id
+                        name
+                        stock
+                    }
+                    message
+                    count
+                }
+            }
+        """
+        )
+
+        # Execute the mutation
+        result = client.execute(mutation)
+        mutation_result = result.get("updateLowStockProducts", {})
+
+        updated_products = mutation_result.get("updatedProducts", [])
+        message = mutation_result.get("message", "No response")
+        count = mutation_result.get("count", 0)
+
+        # Log the results
+        log_entries = []
+        log_entries.append(f"[{timestamp}] Low stock update executed: {message}")
+
+        if updated_products:
+            for product in updated_products:
+                product_name = product.get("name", "Unknown")
+                new_stock = product.get("stock", "Unknown")
+                log_entries.append(
+                    f"[{timestamp}] Updated product: {product_name}, New stock: {new_stock}"
+                )
+        else:
+            log_entries.append(f"[{timestamp}] No low-stock products found to update")
+
+        # Write to log file
+        with open("/tmp/low_stock_updates_log.txt", "a") as log_file:
+            for entry in log_entries:
+                log_file.write(entry + "\n")
+
+    except Exception as e:
+        # Log errors
+        error_message = f"[{timestamp}] ERROR in low stock update: {str(e)}"
+        with open("/tmp/low_stock_updates_log.txt", "a") as log_file:
+            log_file.write(error_message + "\n")
+        print(f"Error updating low stock products: {e}")
